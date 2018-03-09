@@ -1,0 +1,9 @@
+1) Collect list from region from https://docs.aws.amazon.com/general/latest/gr/rande.html & put it in file /tmp/tmp123.
+2) Comment cn-north-1, cn-northwest-1 & us-gov-west-1
+3) Run below Command:
+for i in `grep -v ^# /tmp/tmp123 | awk -F"cloudformation" '{print $1}' | awk '{print $NF}'`
+do
+    echo -e "  $i:\n   \"AMALINUX\": \"\c"
+    aws ec2 describe-images --owners amazon --filters 'Name=description,Values="Amazon Linux 2 LTS Candidate AMI 2017.12.0.20180115 x86_64 HVM GP2"' "Name=root-device-type,Values=ebs" --region=$i --query 'Images[*].{ID:ImageId}' --output text | sed 's/$/"/g'
+#    echo -e "\"  # Amazon Linux 2 LTS Candidate AMI 2017.12.0.20180115 x86_64 HVM GP2"
+done

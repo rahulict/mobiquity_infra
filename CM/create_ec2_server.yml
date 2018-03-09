@@ -1,0 +1,29 @@
+---
+- name: Playbook to create ec2 machine for Mobiquity requirement
+  hosts: localhost
+  vars:
+   region: ap-south-1
+  tasks:
+  - name: create ec2 instance
+    ec2:
+     region: "{{ region }}"
+     image: 'ami-3b2f7954'
+     instance_type: 't2.micro'
+     vpc_subnet_id: 'subnet-dbc415b3'
+     assign_public_ip: yes
+     wait: yes
+     volumes:
+      - device_name: /dev/xvda
+        volume_type: gp2
+        volume_size: 8
+        snapshot: snap-064b9bc8eb39fab15
+        delete_on_termination: true
+     instance_tags:
+      Name: GolangServer
+     group:
+      - My_ALB_SG
+     key_name: Common_key
+    register: ec2
+
+  - name: Wait for ssh to come up
+    wait_for: host={{ ec2.instances[0].public_dns_name }} port=22 delay=60 timeout=320 state=started

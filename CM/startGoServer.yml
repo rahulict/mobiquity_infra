@@ -1,0 +1,52 @@
+---
+- name: Playbook to start Goapplication on EC2 server
+  hosts: tag_Name_GolangServer
+  become: true
+  tasks:
+  - name: Install GO package and apache server on RedHat
+    yum: name={{ item }} state=present update_cache=yes
+    with_items:
+    - go
+    - httpd
+    when: ec2_architecture == "x86_64"
+
+  - name: Create directories to host application code & its logs
+    file: state=directory mode=0775 owner=ec2-user group=ec2-user path={{ item }}
+    with_items:
+    - /home/ec2-user/mobi_IaC_CM/appcode
+    - /home/ec2-user/mobi_IaC_CM/appcode/logs
+
+  - name: Download application code from  public S3 Bucket
+    get_url:
+     url: https://s3.amazonaws.com/ops-hiring-webserver/gowebserver
+     dest: /home/ec2-user/mobi_IaC_CM/appcode/
+     mode: 0750
+     owner: ec2-user
+     group: ec2-user
+     timeout: 30
+
+  - name: Check if gowebserver is already running on port 8082 or not
+    shell: "netstat -atlnp | grep 8082 | awk -F/ '{print $2}'"
+    register: goapplprocess
+
+  #- debug: msg="{{goapplprocess.stdout}}"
+
+  - name: Start gowebserver
+    shell: (export PORT=8082; nohup /home/ec2-user/mobi_IaC_CM/appcode/gowebserver >/home/ec2-user/mobi_IaC_CM/appcode/logs/gowebserver.log 2>&1  &)
+    when: goapplprocess.stdout==""
+
+  - name: copy apache config to redirect traffic on 80 to localhost on port:8082
+    template:
+     src: templates/gowebserver.j2
+     dest: /etc/httpd/conf.d/gowebserver.conf
+     mode: 0664
+     owner: ec2-user
+     group: ec2-user
+    notify: Restart apache
+
+  - name: Start httpd service, if not already running
+    service: name=httpd state=started enabled=true
+
+  handlers:
+  - name: Restart apache
+    service: name=httpd state=restarted enabled=true

@@ -1,0 +1,5 @@
+<VirtualHost {{ ec2_private_ip_address }}:80>
+        servername      {{ ec2_dns_name }}
+        RewriteEngine on
+        RewriteRule ^/(.*) http://localhost:8082/$1 [P]
+</VirtualHost>
