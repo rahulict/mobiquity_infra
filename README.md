@@ -1,1 +1,0 @@
-# mobiquity_infra
